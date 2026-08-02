@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - claude/pacman-game-deployment-33etra
   workflow_dispatch:
 
 # Permissions needed for the GitHub Pages deployment.
@@ -31,10 +30,6 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          # Auto-create/enable the Pages site if it isn't enabled yet,
-          # so the deploy doesn't require a manual Settings toggle first.
-          enablement: true
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3

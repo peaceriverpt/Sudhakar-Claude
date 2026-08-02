@@ -1,0 +1,162 @@
+:root {
+  --yellow: #ffe100;
+  --blue: #1919ff;
+  --bg: #000;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #05050f;
+  color: #fff;
+  font-family: "Press Start 2P", "Courier New", monospace;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 50% 0%, #101040 0%, #05050f 60%);
+}
+
+.wrap {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar {
+  width: 100%;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: clamp(22px, 7vw, 34px);
+  letter-spacing: 4px;
+  color: var(--yellow);
+  text-shadow: 0 0 12px rgba(255, 225, 0, 0.6);
+  font-weight: 800;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+}
+
+.stat {
+  flex: 1;
+  background: rgba(25, 25, 255, 0.12);
+  border: 1px solid rgba(25, 25, 255, 0.5);
+  border-radius: 8px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.stat .label {
+  font-size: 9px;
+  color: #8aa0ff;
+  letter-spacing: 1px;
+}
+
+.stat span:last-child {
+  font-size: 16px;
+}
+
+.lives { color: var(--yellow); letter-spacing: 2px; }
+
+.stage {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+  background: #000;
+  border: 2px solid var(--blue);
+  border-radius: 8px;
+  box-shadow: 0 0 24px rgba(25, 25, 255, 0.45);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  color: var(--yellow);
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: clamp(16px, 5vw, 24px);
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.overlay.gameover {
+  color: #ff5555;
+  background: rgba(0, 0, 0, 0.55);
+  font-size: clamp(13px, 4vw, 18px);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 56px);
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.dpad {
+  font-size: 20px;
+  color: var(--yellow);
+  background: rgba(25, 25, 255, 0.18);
+  border: 1px solid rgba(25, 25, 255, 0.6);
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+.dpad:active { background: rgba(255, 225, 0, 0.25); }
+.dpad.up    { grid-column: 2; grid-row: 1; }
+.dpad.left  { grid-column: 1; grid-row: 2; }
+.dpad.down  { grid-column: 2; grid-row: 2; }
+.dpad.right { grid-column: 3; grid-row: 2; }
+
+.hint {
+  text-align: center;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  color: #7a86b8;
+  line-height: 1.6;
+  margin: 4px 0 0;
+  max-width: 400px;
+}
+
+/* On a real keyboard-equipped screen, hide the touch pad to save space. */
+@media (hover: hover) and (pointer: fine) {
+  .controls { display: none; }
+}

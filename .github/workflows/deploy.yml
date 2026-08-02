@@ -1,0 +1,43 @@
+name: Deploy Pac-Man to GitHub Pages
+
+# Publishes the static game to GitHub Pages so anyone can play it online.
+on:
+  push:
+    branches:
+      - main
+      - claude/pacman-game-deployment-33etra
+  workflow_dispatch:
+
+# Permissions needed for the GitHub Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment; don't cancel in-progress runs.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The whole repo root is the static site (index.html at the top level).
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

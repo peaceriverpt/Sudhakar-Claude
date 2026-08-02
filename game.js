@@ -160,8 +160,81 @@
     stateTimer = timer || 0;
   }
 
+  // ---- Sound --------------------------------------------------------------
+  // All sounds are synthesized with the Web Audio API so the game stays a
+  // single self-contained page with no audio files to load.
+  const Sound = (() => {
+    let ctx = null;
+    let muted = localStorage.getItem('pacman-muted') === '1';
+    let wakaHigh = false;
+
+    function ac() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) ctx = new AC();
+      }
+      return ctx;
+    }
+
+    // Browsers block audio until the first user gesture; call this on input.
+    function resume() {
+      const c = ac();
+      if (c && c.state === 'suspended') c.resume();
+    }
+
+    // Play one note. `slideTo` bends the pitch over the note's duration.
+    function note(freq, dur, { type = 'square', vol = 0.14, slideTo = null, delay = 0 } = {}) {
+      if (muted) return;
+      const c = ac();
+      if (!c) return;
+      const t0 = c.currentTime + delay;
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+      gain.gain.setValueAtTime(vol, t0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain);
+      gain.connect(c.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur);
+    }
+
+    return {
+      resume,
+      isMuted: () => muted,
+      setMuted(m) {
+        muted = m;
+        localStorage.setItem('pacman-muted', m ? '1' : '0');
+      },
+      // The classic "waka-waka": alternate two short chomps as pellets vanish.
+      munch() {
+        wakaHigh = !wakaHigh;
+        note(wakaHigh ? 523 : 392, 0.05, { type: 'square', vol: 0.1 });
+      },
+      // Eating a power pellet.
+      power() {
+        note(180, 0.3, { type: 'sawtooth', vol: 0.14, slideTo: 90 });
+      },
+      // Eating a frightened ghost.
+      eatGhost() {
+        note(180, 0.08, { type: 'square', vol: 0.16 });
+        note(360, 0.12, { type: 'square', vol: 0.16, delay: 0.08 });
+        note(720, 0.16, { type: 'square', vol: 0.16, delay: 0.2 });
+      },
+      // Pac-Man caught by a ghost: a descending wail.
+      death() {
+        note(500, 0.18, { type: 'sawtooth', vol: 0.2, slideTo: 300 });
+        note(360, 0.22, { type: 'sawtooth', vol: 0.2, slideTo: 180, delay: 0.2 });
+        note(220, 0.4, { type: 'sawtooth', vol: 0.2, slideTo: 60, delay: 0.44 });
+      },
+    };
+  })();
+
   // ---- Input --------------------------------------------------------------
   function setDir(d) {
+    Sound.resume(); // unlock audio on the first interaction
     if (state === 'gameover') { newGame(); return; }
     pac.next = d;
   }
@@ -174,7 +247,28 @@
     };
     if (map[e.key]) { e.preventDefault(); setDir(map[e.key]); }
     if (e.key === ' ' && state === 'gameover') newGame();
+    if (e.key === 'm' || e.key === 'M') toggleMute();
   });
+
+  // Mute button + keyboard toggle.
+  const muteBtn = document.getElementById('mute');
+  function refreshMuteBtn() {
+    if (muteBtn) {
+      muteBtn.textContent = Sound.isMuted() ? '🔇' : '🔊';
+      muteBtn.setAttribute('aria-pressed', String(Sound.isMuted()));
+    }
+  }
+  function toggleMute() {
+    Sound.resume();
+    Sound.setMuted(!Sound.isMuted());
+    refreshMuteBtn();
+  }
+  if (muteBtn) {
+    const fire = (e) => { e.preventDefault(); toggleMute(); };
+    muteBtn.addEventListener('click', fire);
+    muteBtn.addEventListener('touchstart', fire, { passive: false });
+  }
+  refreshMuteBtn();
 
   // Touch / swipe controls for mobile.
   let touchStart = null;
@@ -248,10 +342,12 @@
         grid[row][col] = ' ';
         score += 10;
         pelletsLeft--;
+        Sound.munch();
       } else if (ch === 'o') {
         grid[row][col] = ' ';
         score += 50;
         pelletsLeft--;
+        Sound.power();
         enterFrightened();
       }
       if (pelletsLeft <= 0) setState('levelclear', 120);
@@ -377,6 +473,7 @@
           g.state = 'eyes';
           ghostsEaten++;
           score += 200 * Math.pow(2, ghostsEaten - 1); // 200,400,800,1600
+          Sound.eatGhost();
         } else if (g.state === 'normal') {
           loseLife();
           return;
@@ -387,6 +484,7 @@
 
   function loseLife() {
     lives--;
+    Sound.death();
     if (score > best) { best = score; localStorage.setItem('pacman-best', String(best)); }
     setState('dying', 60);
   }

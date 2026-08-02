@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Play Pac-Man in your browser — a free HTML5 remake. Eat the dots, dodge the ghosts, grab the power pellets!" />
+  <meta name="theme-color" content="#000000" />
+  <title>Pac-Man</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ffe100'/><polygon points='50,50 100,25 100,75' fill='black'/></svg>" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <h1>PAC-MAN</h1>
+      <div class="stats">
+        <div class="stat"><span class="label">SCORE</span><span id="score">0</span></div>
+        <div class="stat"><span class="label">BEST</span><span id="best">0</span></div>
+        <div class="stat"><span class="label">LEVEL</span><span id="level">1</span></div>
+        <div class="stat"><span class="label">LIVES</span><span id="lives" class="lives">●●●</span></div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" aria-label="Pac-Man game board"></canvas>
+      <div id="overlay" class="overlay"></div>
+    </div>
+
+    <div class="controls" aria-hidden="true">
+      <button class="dpad up"    data-dir="up">▲</button>
+      <button class="dpad left"  data-dir="left">◀</button>
+      <button class="dpad right" data-dir="right">▶</button>
+      <button class="dpad down"  data-dir="down">▼</button>
+    </div>
+
+    <p class="hint">Arrow keys / WASD to move &middot; swipe or use the pad on mobile &middot; eat power pellets to hunt the ghosts.</p>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>

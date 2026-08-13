@@ -218,6 +218,52 @@
     var keys = { left: false, right: false };
     var pointerX = null; // target x when dragging/touching
 
+    // ---- Sound (Web Audio, no assets) ----
+    var audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+    // Play a short tone. type: waveform; freq: start Hz; freqEnd: optional glide.
+    function tone(freq, dur, type, gain, freqEnd, delay) {
+      var ac = audioCtx;
+      if (!ac) return;
+      var t0 = ac.currentTime + (delay || 0);
+      var osc = ac.createOscillator();
+      var g = ac.createGain();
+      osc.type = type || "sine";
+      osc.frequency.setValueAtTime(freq, t0);
+      if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
+      var peak = gain == null ? 0.2 : gain;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(peak, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(ac.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    }
+    // Catch: a quick, bright upward "bloop". Golden tents get a higher sparkle.
+    function playCatch(golden) {
+      if (!ensureAudio()) return;
+      if (golden) {
+        tone(880, 0.09, "triangle", 0.22, 1320);
+        tone(1320, 0.12, "triangle", 0.16, 1760, 0.06);
+      } else {
+        tone(520, 0.10, "triangle", 0.22, 780);
+      }
+    }
+    // Lose: a low, sad descending "wah-wah".
+    function playLose() {
+      if (!ensureAudio()) return;
+      tone(360, 0.28, "sawtooth", 0.20, 200);
+      tone(270, 0.45, "sawtooth", 0.20, 130, 0.22);
+    }
+
     function resize() {
       var rect = canvas.getBoundingClientRect();
       DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -328,6 +374,7 @@
     }
 
     function startGame() {
+      ensureAudio();   // unlock audio on the user's click/tap
       resize();
       reset();
       hideOverlay();
@@ -336,6 +383,7 @@
 
     function gameOver() {
       state = STATE.OVER;
+      playLose();
       if (score > best) {
         best = score;
         bestEl.textContent = best;
@@ -398,6 +446,7 @@
             t.x > catchLeft && t.x < catchRight) {
           tents.splice(i, 1);
           score += t.golden ? 5 : 1;
+          playCatch(t.golden);
           updateHud();
           continue;
         }

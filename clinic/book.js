@@ -35,7 +35,7 @@
       const cur = days.find((x) => x.k === st.date);
       const slots = cur.slots.sort((a, b) => a.t - b.t);
       // for "first available" show one button per time with the practitioner noted
-      html = `<h2 class="mb">Pick a date and time</h2><div class="daystrip mb">${days.slice(0, 28).map((x) => `<button data-day="${x.k}" class="${x.k === st.date ? 'active' : ''}" ${x.slots.length ? '' : 'disabled'}><div class="d">${U.DAYS[x.d.getDay()]}</div><div class="n">${x.d.getDate()}</div><div class="tiny">${U.MONTHS[x.d.getMonth()]}</div></button>`).join('')}</div>
+      html = `${st.notice ? `<div class="alert warn">${esc(st.notice)}</div>` : ''}<h2 class="mb">Pick a date and time</h2><div class="daystrip mb">${days.slice(0, 28).map((x) => `<button data-day="${x.k}" class="${x.k === st.date ? 'active' : ''}" ${x.slots.length ? '' : 'disabled'}><div class="d">${U.DAYS[x.d.getDay()]}</div><div class="n">${x.d.getDate()}</div><div class="tiny">${U.MONTHS[x.d.getMonth()]}</div></button>`).join('')}</div>
         <div class="bold mb">${fmtDate(parseKey(st.date))}</div>
         ${slots.length ? `<div class="slot-grid">${slots.map((x) => `<button class="btn" data-slot="${x.t.toISOString()}" data-slotpr="${x.p.id}">${fmtTime(x.t)}${!st.practitionerId ? ` <span class="tiny muted">· ${esc(x.p.name.split(' ')[0])}</span>` : ''}</button>`).join('')}</div>` : '<div class="card pad muted">No openings on this day — try another date.</div>'}`;
     } else if (st.step === 4) {
@@ -64,12 +64,12 @@
     body.querySelectorAll('[data-tx]').forEach((b) => b.addEventListener('click', () => { st.treatmentId = b.dataset.tx; st.step = 2; render(); }));
     body.querySelectorAll('[data-pr]').forEach((b) => b.addEventListener('click', () => { st.practitionerId = b.dataset.pr || null; st.date = null; st.step = 3; render(); }));
     body.querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => { st.date = b.dataset.day; render(); }));
-    body.querySelectorAll('[data-slot]').forEach((b) => b.addEventListener('click', () => { st.start = new Date(b.dataset.slot); st.slotPr = b.dataset.slotpr; st.step = 4; render(); window.scrollTo(0, 0); }));
+    body.querySelectorAll('[data-slot]').forEach((b) => b.addEventListener('click', () => { st.notice = ''; st.start = new Date(b.dataset.slot); st.slotPr = b.dataset.slotpr; st.step = 4; render(); window.scrollTo(0, 0); }));
     const find = $('#bk-find'); if (find) find.addEventListener('click', () => { const q = $('#bk-lookup').value.trim().toLowerCase().replace(/[^a-z0-9@.]/g, ''); if (!q) return; const p = S.state.patients.find((x) => x.email.toLowerCase() === q || x.phone.replace(/\D/g, '') === q.replace(/\D/g, '')); const out = $('#bk-found'); if (p) { st.patient = p; const f = $('#bk-form'); f.first.value = p.first; f.last.value = p.last; f.email.value = p.email; f.phone.value = p.phone; f.dob.value = p.dob; out.innerHTML = `<span style="color:var(--ok)">✓ Welcome back, ${esc(p.first)}! We found your file.</span>`; } else { st.patient = null; out.innerHTML = '<span class="muted">We couldn\'t find a match — just fill in your details below and we\'ll create your file.</span>'; } });
     const form = $('#bk-form'); if (form) form.addEventListener('submit', (e) => {
       e.preventDefault(); const d = Object.fromEntries(new FormData(form));
       const tx = S.treatment(st.treatmentId); const prId = st.practitionerId || st.slotPr; const end = addMinutes(st.start, tx.duration);
-      if (S.conflicts(prId, st.start, end).length) { alert('Sorry — that time was just taken. Please pick another time.'); st.step = 3; st.start = null; render(); return; }
+      if (S.conflicts(prId, st.start, end).length) { st.step = 3; st.start = null; st.notice = 'Sorry, that time was just taken. Please pick another time.'; render(); return; }
       let p = st.patient || S.state.patients.find((x) => x.email && x.email.toLowerCase() === d.email.toLowerCase());
       if (p) { S.update('patients', p.id, { phone: d.phone || p.phone, dob: p.dob || d.dob }); }
       else { p = S.add('patients', { first: d.first, last: d.last, dob: d.dob, sex: '', email: d.email, phone: d.phone, address: '', city: '', province: '', postal: '', healthNumber: '', homeLocationId: st.locationId, emergencyName: '', emergencyPhone: '', insurers: [], notes: '', tags: [], referredBy: d.referredBy, complaint: d.notes || '', createdAt: new Date().toISOString(), consentOnFile: true, alerts: '' }); }

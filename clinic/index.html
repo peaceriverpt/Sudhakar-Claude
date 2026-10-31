@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ClinicFlow — scheduling, charting, billing and online booking for multi-location wellness clinics." />
+  <meta name="theme-color" content="#0b1f1d" />
+  <title>ClinicFlow</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230f766e'/><path d='M50 22v56M22 50h56' stroke='white' stroke-width='14' stroke-linecap='round'/></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="logo">✚</div><span id="brand-name">ClinicFlow</span></div>
+      <nav class="nav" id="nav">
+        <a href="#/dashboard" data-route="dashboard"><span class="ico">⌂</span> Dashboard</a>
+        <a href="#/schedule" data-route="schedule"><span class="ico">📅</span> Schedule</a>
+        <a href="#/patients" data-route="patients"><span class="ico">👤</span> Patients</a>
+        <a href="#/billing" data-route="billing"><span class="ico">💳</span> Billing</a>
+        <a href="#/waitlist" data-route="waitlist"><span class="ico">⏳</span> Wait list</a>
+        <a href="#/reports" data-route="reports"><span class="ico">📈</span> Reports</a>
+        <a href="#/staff" data-route="staff"><span class="ico">🩺</span> Staff &amp; Services</a>
+        <a href="#/settings" data-route="settings"><span class="ico">⚙</span> Settings</a>
+      </nav>
+      <div class="spacer"></div>
+      <div class="foot">
+        <a href="book.html" target="_blank" rel="noopener">↗ Open patient booking page</a><br />
+        Data is stored in this browser. Back it up from Settings.
+      </div>
+    </aside>
+
+    <header class="topbar">
+      <button class="btn ghost menu-btn" id="menu-btn" aria-label="Menu">☰</button>
+      <div class="title" id="page-title">Dashboard</div>
+      <div class="search">
+        <span class="ico">🔍</span>
+        <input id="global-search" type="search" placeholder="Search patients (name, phone, email)…" autocomplete="off" />
+        <div class="search-results hidden" id="search-results"></div>
+      </div>
+      <select id="loc-filter" title="Location"></select>
+      <button class="btn primary" data-action="new-appointment">+ Book</button>
+    </header>
+
+    <main class="main" id="main"></main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <div id="print-root"></div>
+
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

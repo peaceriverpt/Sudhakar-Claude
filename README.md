@@ -1,3 +1,12 @@
+# Sudhakar-Claude
+
+This repository is a GitHub Pages site with two things on it:
+
+1. **[ClinicFlow](clinic/README.md)** — a clinic management app (scheduling, patients, charting, billing, online booking, reports) for multi-location wellness clinics. Open it at `/clinic/` on the Pages URL. See [clinic/README.md](clinic/README.md) for the full guide.
+2. **Pac-Man** and **Tent Catcher** — two small browser games (below).
+
+---
+
 # Pac-Man 🟡
 
 A complete, browser-based **Pac-Man** game built with plain HTML5 Canvas and

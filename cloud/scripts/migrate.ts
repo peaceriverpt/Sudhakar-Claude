@@ -2,10 +2,11 @@
 import postgres from 'postgres';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { sslFor } from '../lib/dbssl';
 
 const url = process.env.DATABASE_OWNER_URL || process.env.DATABASE_URL;
 if (!url) { console.error('Set DATABASE_OWNER_URL (owner role) to run migrations.'); process.exit(1); }
-const sql = postgres(url, { max: 1 });
+const sql = postgres(url, { max: 1, ssl: sslFor(url) });
 
 async function main() {
   await sql`create table if not exists schema_migrations (name text primary key, applied_at timestamptz not null default now())`;

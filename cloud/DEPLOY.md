@@ -1,68 +1,100 @@
-# Deploying ClinicFlow Cloud
+# Putting ClinicFlow Cloud online
 
-This takes about 45 minutes the first time and needs no coding. You will create two accounts: a database host and an app host. Both have free tiers that are enough for a pilot.
+About 45 minutes. No coding and no terminal. You need three things: your GitHub login, a password manager (1Password, Bitwarden, or your browser's), and this page open beside you.
 
-Patient data must stay in Canada, so pick Canadian regions where shown.
+You will set up two free accounts:
 
-## 1. Create the database (Neon or Supabase)
+- **Supabase** stores the data, in Canada.
+- **Vercel** runs the app and gives you a web address.
 
-**Option A: Neon** (simplest)
-1. Go to neon.tech and sign up. Create a project named `clinicflow`, region **AWS ca-central-1 (Canada)**.
-2. In the project dashboard, open **Roles** and create two roles: `clinicflow_owner` and `clinicflow_app`. Save both passwords in your password manager.
-3. Open **Databases** and create a database named `clinicflow` owned by `clinicflow_owner`.
-4. Open the **SQL editor** and run: `grant usage on schema public to clinicflow_app;`
-5. From **Connection details**, copy the connection string once for each role. You now have:
-   - `DATABASE_OWNER_URL` (the `clinicflow_owner` string)
-   - `DATABASE_URL` (the `clinicflow_app` string)
+> **Never paste a password or connection string into a chat, email or document.** Keep them only in your password manager and in the two websites below.
 
-**Option B: Supabase**: create a project in the **Canada (Central)** region, then follow the same role steps in the SQL editor:
-```sql
-create role clinicflow_owner login password '…';
-create role clinicflow_app login password '…';
-create database clinicflow owner clinicflow_owner;
-```
+---
 
-Both providers take automatic daily backups. Turn on point-in-time recovery once you have real patients.
+## Part 1. Database (Supabase), about 15 minutes
 
-## 2. Load the schema
+1. Go to **supabase.com** and click **Start your project**. Sign up with your GitHub account.
+2. Click **New project**.
+   - **Name:** `clinicflow`
+   - **Database password:** click **Generate a password** and save it in your password manager as "Supabase master password".
+   - **Region:** **Canada (Central)**. This keeps patient data in Canada. Do not pick any other region.
+   - Click **Create new project** and wait about two minutes.
+3. Make two more passwords in your password manager, each **24 characters, letters and numbers only** (turn symbols off; symbols break the connection strings). Name them:
+   - "ClinicFlow owner password"
+   - "ClinicFlow app password"
+4. In Supabase, open **SQL Editor** in the left menu, click **New query**, and paste this. Replace the two `PASTE_…` parts with the passwords from step 3, keeping the single quotes:
 
-On any computer with Node.js installed (or ask whoever helps you technically to run these once):
-```bash
-cd cloud
-npm install
-DATABASE_OWNER_URL="<owner string>" npm run db:migrate
-```
-To load the demo clinic as well: `DATABASE_OWNER_URL="<owner string>" npm run db:seed`
+   ```sql
+   create role clinicflow_owner login password 'PASTE_OWNER_PASSWORD_HERE';
+   create role clinicflow_app   login password 'PASTE_APP_PASSWORD_HERE';
+   grant usage, create on schema public to clinicflow_owner;
+   grant usage on schema public to clinicflow_app;
+   ```
 
-## 3. Deploy the app (Vercel)
+   Click **Run**. You should see "Success. No rows returned." Then delete the text from the editor so the passwords are not left on screen.
+5. Click **Connect** at the top of the project page. You will build two connection strings from what it shows.
 
-1. Go to vercel.com, sign up with your GitHub account, click **Add New → Project** and pick this repository.
-2. Set **Root Directory** to `cloud`. Framework is detected as Next.js.
-3. Under **Environment Variables** add:
-   - `DATABASE_URL` = the `clinicflow_app` connection string
-   - `DATABASE_OWNER_URL` = the `clinicflow_owner` connection string
-   - `SESSION_SECRET` = a long random string (40+ characters; a password generator works)
-   - `APP_URL` = the address Vercel gives you, e.g. `https://clinicflow-yourname.vercel.app` (update it later if you add your own domain)
-4. Click **Deploy**. Two minutes later you have a live address. Open `/signup` to create your clinic, or `/login` with the demo account if you seeded it.
-5. In Vercel's project settings, under **Functions**, choose the **Toronto (yyz1)** region so the app runs near the database.
+   **App connection (`DATABASE_URL`)**: under **Transaction pooler**, copy the string. It looks like
+   `postgresql://postgres.abcdefgh:[YOUR-PASSWORD]@aws-0-ca-central-1.pooler.supabase.com:6543/postgres`
+   Change it in a text note on your computer, not online:
+   - replace `postgres.` (just before the dot and the letters) with `clinicflow_app.`
+   - replace `[YOUR-PASSWORD]` with the **app password**, no brackets.
+   Result: `postgresql://clinicflow_app.abcdefgh:YourAppPassword@aws-0-ca-central-1.pooler.supabase.com:6543/postgres`
+   Save it in your password manager as "ClinicFlow DATABASE_URL".
 
-## 4. After it is live
+   **Owner connection (`DATABASE_OWNER_URL`)**: under **Session pooler**, copy the string (it ends in `:5432/postgres`). Make the same two changes, using `clinicflow_owner.` and the **owner password**. Save it as "ClinicFlow DATABASE_OWNER_URL".
+6. Still in Supabase: **Project Settings → Data API**. If there is a switch to turn off the Data API, turn it off. ClinicFlow does not use it, and the app also locks it out on its own.
 
-- **Own domain**: Vercel → Settings → Domains → add `app.yourclinic.com` and follow the DNS instructions. Update `APP_URL`.
-- **Invite staff**: Settings → Team & logins. Send each person their link.
-- **Booking page**: Settings shows the public address to put on your website.
-- **Updates**: every change merged into `main` on GitHub deploys automatically.
-- **Backups**: confirm in the database dashboard that backups are enabled, and once a quarter restore one to a scratch project to be sure it works.
+## Part 2. Get the code ready (GitHub), about 2 minutes
 
-## Environment variables, in one place
+7. Open the ClinicFlow Cloud pull request on GitHub and click **Merge pull request**, then **Confirm merge**. This puts the cloud app on your main branch, which is what Vercel publishes.
 
-| Name | What it is |
+## Part 3. The app (Vercel), about 15 minutes
+
+8. Go to **vercel.com**, click **Sign Up**, choose **Hobby**, and continue with GitHub. Allow Vercel to see the **Sudhakar-Claude** repository when asked.
+9. Click **Add New… → Project**, find **Sudhakar-Claude**, click **Import**.
+10. On the setup screen:
+    - **Project Name:** `clinicflow` (this becomes your address, e.g. `clinicflow.vercel.app`; if taken, try `clinicflow-peaceriver`).
+    - **Root Directory:** click **Edit**, choose the **cloud** folder, click **Continue**.
+    - **Framework Preset:** Next.js (it should pick this by itself).
+    - Open **Environment Variables** and add these five, one at a time (name on the left, value on the right):
+
+    | Name | Value |
+    | --- | --- |
+    | `DATABASE_URL` | your "ClinicFlow DATABASE_URL" from step 5 |
+    | `DATABASE_OWNER_URL` | your "ClinicFlow DATABASE_OWNER_URL" from step 5 |
+    | `SESSION_SECRET` | a new 48-character password from your password manager, letters and numbers |
+    | `APP_URL` | `https://` plus your project name plus `.vercel.app`, e.g. `https://clinicflow.vercel.app` |
+    | `SEED_DEMO` | `1` to load the demo clinic so you can try it; leave this out if you want to start empty |
+
+11. Click **Deploy**. Wait two to four minutes. The build log will show `applied 0001_init.sql` and, if you set `SEED_DEMO`, `seeded demo org`. When you see the confetti screen, click **Continue to Dashboard**, then the address under **Domains**.
+12. If the address Vercel gave you differs from what you typed for `APP_URL`, fix it: **Settings → Environment Variables → APP_URL → Edit**, then **Deployments → ⋯ on the latest → Redeploy**.
+13. **Settings → Functions → Function Region**: choose the region closest to Canada (Montréal if listed, otherwise Washington, D.C.). Note this choice for your privacy consultant: the data is stored in Canada, and requests pass through this region while being processed.
+
+## Part 4. Try it
+
+14. Open `https://your-address/login` and sign in with `demo@clinicflow.app` / `demo-password-123` (only if you set `SEED_DEMO`). Click around: schedule, a patient, checkout, reports.
+15. To set up your real clinic, open `https://your-address/signup` and create it with your own email. That is a separate, empty clinic. The demo clinic cannot see it and it cannot see the demo.
+16. Your public booking page is shown under **Settings** in the app.
+
+**Before any real patient data goes in:** change the demo password or delete the demo clinic, finish the privacy assessment, and turn on daily backups (Supabase → Database → Backups; point-in-time recovery is on the paid plan).
+
+---
+
+## If something goes wrong
+
+| What you see | What it means |
 | --- | --- |
-| `DATABASE_URL` | Connection for the app role (`clinicflow_app`). Row-level security applies to it. |
-| `DATABASE_OWNER_URL` | Connection for the owner role. Only used by migrations and seeding. |
-| `SESSION_SECRET` | Signs login cookies and tokens. Changing it signs everyone out. |
-| `APP_URL` | Public address of the app, used in invitation and intake links. |
+| Build fails with `DATABASE_OWNER_URL is not set` | The variable name has a typo, or it was added after the deploy. Fix it, then **Redeploy**. |
+| Build fails with `password authentication failed` | The password inside a connection string does not match step 4, or the username still says `postgres.` instead of `clinicflow_owner.` / `clinicflow_app.`. |
+| Build fails with `Tenant or user not found` | The part after `clinicflow_owner.` must be your project's code, exactly as in the string Supabase gave you. |
+| Login page loads but sign-in shows an error | Check `DATABASE_URL` uses the **Transaction pooler** (port `6543`) and the **app** password. |
+| Invitation and intake links point to the wrong address | `APP_URL` is wrong; fix it and redeploy. |
 
-## Costs at pilot scale
+Copy the exact error text (never a password) into the chat and ask for help.
 
-Neon or Supabase free tier plus Vercel Hobby covers a pilot. For production with five clinics expect roughly 30 to 60 USD a month across both, as estimated earlier.
+## Afterwards
+
+- Every change merged into `main` on GitHub redeploys automatically and applies any new database changes.
+- **Own domain:** Vercel → Settings → Domains → add e.g. `app.peaceriverwellness.ca` and follow the instructions there. Then update `APP_URL` and redeploy.
+- **Costs:** both free tiers cover a pilot. For production with real patients, expect Supabase Pro (about 25 USD a month, includes daily backups) and Vercel Pro (about 20 USD per team member a month).

@@ -38,7 +38,7 @@ Other scripts: `npm run test:rls` (tenant isolation), `npm run typecheck`, `npm 
 
 ## Deploying
 
-See [DEPLOY.md](DEPLOY.md) for a step-by-step guide that needs no coding: a managed PostgreSQL database in Canada plus Vercel for the app.
+See [DEPLOY.md](DEPLOY.md) for a step-by-step guide that needs no coding: Supabase (Canada region) for the database and Vercel for the app. Each Vercel deploy applies new database migrations automatically (`npm run vercel-build`), and loads the demo clinic once if `SEED_DEMO=1`.
 
 ## Layout
 

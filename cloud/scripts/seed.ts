@@ -2,9 +2,10 @@
    Login: demo@clinicflow.app / demo-password-123 */
 import postgres from 'postgres';
 import bcrypt from 'bcryptjs';
+import { sslFor } from '../lib/dbssl';
 import { localToUtc, addDaysKey, weekdayOfKey, todayKey, invoiceTotals, DEFAULT_SETTINGS } from '../lib/util';
 
-const owner = postgres(process.env.DATABASE_OWNER_URL!, { max: 1, transform: { undefined: null } });
+const owner = postgres(process.env.DATABASE_OWNER_URL!, { max: 1, ssl: sslFor(process.env.DATABASE_OWNER_URL!), transform: { undefined: null } });
 const TZ = 'America/Edmonton';
 function rng(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const rnd = rng(20261101); const pick = <T,>(arr: T[]) => arr[Math.floor(rnd() * arr.length)]; const between = (a: number, b: number) => a + Math.floor(rnd() * (b - a + 1));

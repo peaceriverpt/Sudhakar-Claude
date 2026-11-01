@@ -1,10 +1,11 @@
 import 'server-only';
 import postgres, { type Sql, type TransactionSql } from 'postgres';
+import { sslFor } from './dbssl';
 
 declare global { var __cf_sql: Sql | undefined; }
 
 /** Application connection: clinicflow_app role, subject to row-level security. */
-export const sql: Sql = global.__cf_sql ?? postgres(process.env.DATABASE_URL!, { max: 10, idle_timeout: 20, prepare: false, transform: { undefined: null } });
+export const sql: Sql = global.__cf_sql ?? postgres(process.env.DATABASE_URL!, { ssl: sslFor(process.env.DATABASE_URL || ''), max: 10, idle_timeout: 20, prepare: false, transform: { undefined: null } });
 if (process.env.NODE_ENV !== 'production') global.__cf_sql = sql;
 
 export type Tx = TransactionSql;

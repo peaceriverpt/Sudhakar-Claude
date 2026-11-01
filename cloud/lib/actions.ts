@@ -397,3 +397,21 @@ export async function importData(input: { locationId: string; providersText?: st
     revalidateAll(); return { ok: true, data: sum };
   });
 }
+
+/* ====================== sample data ====================== */
+import { hasSampleData, loadSampleData as genSample, removeSampleData as delSample } from './sampleData';
+export async function loadSampleData(): Promise<Result<{ appointments: number; patients: number }>> {
+  const s = await requireSession(); if (!can(s, 'manage_org')) return fail('Only the clinic owner can load sample data.');
+  try {
+    return await tenant(s, async (tx) => {
+      if (await hasSampleData(tx)) return fail('Sample data is already loaded.');
+      const r = await genSample(tx, s.orgId, s.userId, s.settings);
+      await log(tx, s, { action: 'sample.load', entity: 'organization', details: r }); revalidateAll();
+      return { ok: true, data: { appointments: r.appointments, patients: r.patients } };
+    });
+  } catch (e) { return fail((e as Error).message || 'Could not load sample data.'); }
+}
+export async function removeSampleData(): Promise<Result<{ patients: number }>> {
+  const s = await requireSession(); if (!can(s, 'manage_org')) return fail('Only the clinic owner can remove sample data.');
+  return tenant(s, async (tx) => { const r = await delSample(tx); await log(tx, s, { action: 'sample.remove', entity: 'organization', details: r }); revalidateAll(); return { ok: true, data: { patients: r.patients } }; });
+}

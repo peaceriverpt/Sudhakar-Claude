@@ -1,0 +1,38 @@
+name: ClinicFlow Cloud checks
+
+on:
+  push:
+    paths: ['cloud/**', '.github/workflows/cloud-ci.yml']
+  pull_request:
+    paths: ['cloud/**', '.github/workflows/cloud-ci.yml']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults: { run: { working-directory: cloud } }
+    env:
+      DATABASE_URL: postgres://clinicflow_app:app@localhost:5432/clinicflow
+      DATABASE_OWNER_URL: postgres://clinicflow_owner:owner@localhost:5432/clinicflow
+      SESSION_SECRET: ci-secret-not-for-production-0123456789
+      APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: cloud/package-lock.json }
+      - name: Create database roles
+        run: |
+          psql postgres://postgres:postgres@localhost:5432/postgres -c "create role clinicflow_owner login password 'owner';" -c "create role clinicflow_app login password 'app';"
+          psql postgres://postgres:postgres@localhost:5432/postgres -c "create database clinicflow owner clinicflow_owner;"
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Tenant isolation test
+        run: npm run test:rls
+      - run: npm run typecheck
+      - run: npm run build

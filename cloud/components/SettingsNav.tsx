@@ -1,0 +1,2 @@
+import { PillTabs } from '@/components/ui';
+export function SettingsNav({ active }: { active: string }) { return <PillTabs active={active} items={[['general', 'Clinic & locations', '/app/settings'], ['team', 'Team & logins', '/app/settings/team'], ['intake', 'Intake forms', '/app/settings/intake'], ['api', 'API keys', '/app/settings/api'], ['audit', 'Audit log', '/app/settings/audit']].map(([key, label, href]) => ({ key, label, href }))} />; }

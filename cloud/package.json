@@ -1,0 +1,33 @@
+{
+  "name": "clinicflow-cloud",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:reset": "tsx scripts/reset.ts",
+    "test:rls": "tsx scripts/test-rls.ts",
+    "vercel-build": "tsx scripts/deploy.ts && next build"
+  },
+  "dependencies": {
+    "bcryptjs": "3.0.3",
+    "next": "15.5.28",
+    "postgres": "3.4.7",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "server-only": "^0.0.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3"
+  }
+}

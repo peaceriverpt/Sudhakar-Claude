@@ -193,7 +193,7 @@ export async function deleteChart(id: string): Promise<Result> {
 /* ====================== staff & services ====================== */
 export async function savePractitioner(prev: Result | null, fd: FormData): Promise<Result> {
   const s = await requireSession(); if (!can(s, 'manage_staff')) return fail('Not allowed'); const id = str(fd, 'id'); const name = str(fd, 'name'); if (!name) return fail('Name is required');
-  const rec = { name, title: str(fd, 'title'), discipline: str(fd, 'discipline'), color: str(fd, 'color') || COLORS[0], email: str(fd, 'email'), phone: str(fd, 'phone'), bio: str(fd, 'bio'), online: bool(fd, 'online'), active: bool(fd, 'active') };
+  const rec = { name, title: str(fd, 'title'), discipline: str(fd, 'discipline'), color: str(fd, 'color') || COLORS[0], email: str(fd, 'email'), phone: str(fd, 'phone'), bio: str(fd, 'bio'), license_number: str(fd, 'license_number'), online: bool(fd, 'online'), active: bool(fd, 'active') };
   const locIds = (fd.getAll('locations') as string[]).filter(Boolean);
   const shifts: { weekday: number; start: number; end: number; loc: string }[] = [];
   for (const d of [0, 1, 2, 3, 4, 5, 6]) if (bool(fd, `on_${d}`)) { const st = hm(str(fd, `start_${d}`) || '09:00'), en = hm(str(fd, `end_${d}`) || '17:00'); if (en > st) shifts.push({ weekday: d, start: st, end: en, loc: str(fd, `loc_${d}`) }); }
@@ -342,3 +342,58 @@ export async function searchPatientsAction(q: string): Promise<{ id: string; nam
   return tenant(s, async (tx) => { const like = `%${q.trim()}%`; const rows = await tx`select id, first_name || ' ' || last_name as name, phone, email, dob::text as dob from patients where first_name || ' ' || last_name ilike ${like} or email ilike ${like} or phone ilike ${like} order by last_name, first_name limit 10`; return rows.map((r) => ({ id: r.id, name: r.name, phone: r.phone, email: r.email, dob: r.dob })); });
 }
 export async function setLocationFilter(locationId: string) { const { cookies } = await import('next/headers'); (await cookies()).set('cf_loc', locationId, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 }); revalidateAll(); }
+
+/* ====================== import from a previous system ====================== */
+import { csvObjects, detectKind, mapProviders, mapFees, mapAttendance } from './importers';
+export type ImportSummary = { practitioners: { added: number; updated: number }; treatments: { added: number; updated: number }; products: { added: number; updated: number }; patients: { added: number; updated: number; linked: number } };
+export async function importData(input: { locationId: string; providersText?: string; feesText?: string; attendanceText?: string; disciplineOverrides?: Record<string, string>; sourceName?: string }): Promise<Result<ImportSummary>> {
+  const s = await requireSession(); if (!can(s, 'manage_org')) return fail('Only the clinic owner can import data.');
+  if (!uuid.safeParse(input.locationId).success) return fail('Choose the location these records belong to.');
+  const providers = input.providersText ? (detectKind(input.providersText) === 'providers' ? mapProviders(csvObjects(input.providersText)) : null) : [];
+  const fees = input.feesText ? (detectKind(input.feesText) === 'fees' ? mapFees(csvObjects(input.feesText)) : null) : { treatments: [], products: [], skipped: [] };
+  const att = input.attendanceText ? (detectKind(input.attendanceText) === 'attendance' ? mapAttendance(csvObjects(input.attendanceText)) : null) : { patients: [], duplicates: 0, missingLast: 0 };
+  if (!providers || !fees || !att) return fail('One of the files is not in a format this importer recognizes.');
+  const source = (input.sourceName || 'previous system').slice(0, 80); const overrides = input.disciplineOverrides || {};
+  const tz = s.settings.timezone; const sum: ImportSummary = { practitioners: { added: 0, updated: 0 }, treatments: { added: 0, updated: 0 }, products: { added: 0, updated: 0 }, patients: { added: 0, updated: 0, linked: 0 } };
+  const tally = (bucket: { added: number; updated: number }, inserted: boolean) => { if (inserted) bucket.added++; else bucket.updated++; };
+  return tenant(s, async (tx) => {
+    const [loc] = await tx`select id from locations where id = ${input.locationId}`; if (!loc) return fail('Location not found.');
+    const [{ n: existingPr }] = await tx`select count(*)::int as n from practitioners`;
+    for (const [i, p] of providers.entries()) {
+      const discipline = overrides[p.externalId] || p.discipline;
+      const [row] = await tx`insert into practitioners (org_id, name, title, discipline, color, email, license_number, external_id, online, active)
+        values (${s.orgId}, ${p.name}, ${p.title}, ${discipline}, ${COLORS[(existingPr + i) % COLORS.length]}, ${p.email}, ${p.license}, ${p.externalId}, false, true)
+        on conflict (org_id, external_id) where external_id is not null do update set name = excluded.name, title = excluded.title, discipline = excluded.discipline, license_number = excluded.license_number
+        returning id, (xmax = 0) as inserted`;
+      tally(sum.practitioners, row.inserted);
+      await tx`insert into practitioner_locations (org_id, practitioner_id, location_id) values (${s.orgId}, ${row.id}, ${input.locationId}) on conflict do nothing`;
+    }
+    for (const t of fees.treatments) {
+      const [row] = await tx`insert into treatments (org_id, name, discipline, duration_min, price_cents, is_assessment, online, active, code, external_id)
+        values (${s.orgId}, ${t.name}, ${t.discipline}, ${t.durationMin}, ${t.priceCents}, ${t.isAssessment}, false, ${t.active}, ${t.code}, ${t.externalId})
+        on conflict (org_id, external_id) where external_id is not null do update set name = excluded.name, price_cents = excluded.price_cents, duration_min = excluded.duration_min, discipline = excluded.discipline, is_assessment = excluded.is_assessment, active = excluded.active, code = excluded.code
+        returning (xmax = 0) as inserted`;
+      tally(sum.treatments, row.inserted);
+    }
+    for (const p of fees.products) {
+      const [row] = await tx`insert into products (org_id, name, price_cents, taxable, active, code, external_id) values (${s.orgId}, ${p.name}, ${p.priceCents}, ${p.taxable}, ${p.active}, ${p.code}, ${p.externalId})
+        on conflict (org_id, external_id) where external_id is not null do update set name = excluded.name, price_cents = excluded.price_cents, active = excluded.active, code = excluded.code
+        returning (xmax = 0) as inserted`;
+      tally(sum.products, row.inserted);
+    }
+    // every practitioner can offer the services of their discipline
+    await tx`insert into practitioner_treatments (org_id, practitioner_id, treatment_id) select ${s.orgId}, p.id, t.id from practitioners p join treatments t on t.discipline = p.discipline on conflict do nothing`;
+    const prIds = new Map((await tx`select id, external_id from practitioners where external_id is not null`).map((r) => [r.external_id as string, r.id as string]));
+    for (let i = 0; i < att.patients.length; i += 500) {
+      const chunk = att.patients.slice(i, i + 500).map((p) => {
+        const prId = p.providerKey ? prIds.get(p.providerKey) || null : null; if (prId) sum.patients.linked++;
+        return { org_id: s.orgId, first_name: p.first, last_name: p.last, home_location_id: input.locationId, referred_by: `Imported from ${source}`, created_at: p.firstVisit ? localToUtc(p.firstVisit, 9 * 60, tz) : new Date(), created_by: s.userId, external_id: p.externalId,
+          legacy: tx.json({ source, firstVisit: p.firstVisit, lastVisit: p.lastVisit, completed: p.completed, cancelled: p.cancelled, noShow: p.noShow, rebook: p.rebook, managingProvider: p.providerLabel, managingProviderId: prId } as never) };
+      });
+      const rows = await tx`insert into patients ${tx(chunk)} on conflict (org_id, external_id) where external_id is not null do update set legacy = excluded.legacy returning (xmax = 0) as inserted`;
+      rows.forEach((r) => tally(sum.patients, r.inserted));
+    }
+    await log(tx, s, { action: 'data.import', entity: 'organization', details: { source, location: input.locationId, ...sum } });
+    revalidateAll(); return { ok: true, data: sum };
+  });
+}

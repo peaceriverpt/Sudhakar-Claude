@@ -66,7 +66,7 @@ export async function getPatient(tx: Tx, id: string): Promise<Patient | null> {
 export async function searchPatients(tx: Tx, q: string, filter: string, locationId: string | null, limit = 300): Promise<Row[]> {
   const like = `%${q.trim()}%`;
   return tx`select p.*, 
-      (select max(starts_at) from appointments a where a.patient_id = p.id and a.status = 'completed') as last_visit,
+      coalesce((select max(starts_at) from appointments a where a.patient_id = p.id and a.status = 'completed'), (p.legacy->>'lastVisit')::timestamptz) as last_visit,
       (select min(starts_at) from appointments a where a.patient_id = p.id and a.starts_at > now() and a.status in ('booked','arrived')) as next_visit,
       (select coalesce(sum(i.total_cents),0) - coalesce(sum((select coalesce(sum(amount_cents),0) from payments where invoice_id = i.id)),0) from invoices i where i.patient_id = p.id and not i.voided)::int as balance_cents,
       (select company from patient_insurers where patient_id = p.id order by sort_order limit 1) as insurer
@@ -92,7 +92,7 @@ export async function patientCharts(tx: Tx, patientId: string): Promise<Chart[]>
 export type Invoice = Row & { payments: Row[]; paid_cents: number; balance_cents: number; status: 'paid' | 'partial' | 'unpaid' | 'void' };
 const decorate = (inv: Row, payments: Row[]): Invoice => { const paid = payments.reduce((s, p) => s + p.amount_cents, 0); const bal = inv.total_cents - paid; return { ...inv, payments, paid_cents: paid, balance_cents: bal, status: inv.voided ? 'void' : bal <= 0 ? 'paid' : bal < inv.total_cents ? 'partial' : 'unpaid' }; };
 export async function getInvoice(tx: Tx, id: string): Promise<Invoice | null> {
-  const r: Row[] = await tx`select i.*, p.first_name || ' ' || p.last_name as patient_name, p.email as patient_email, p.address as patient_address, p.city as patient_city, p.phone as patient_phone, pr.name as practitioner_name, pr.title as practitioner_title, l.name as location_name, l.address as location_address, l.phone as location_phone from invoices i join patients p on p.id = i.patient_id left join practitioners pr on pr.id = i.practitioner_id left join locations l on l.id = i.location_id where i.id = ${id}`;
+  const r: Row[] = await tx`select i.*, p.first_name || ' ' || p.last_name as patient_name, p.email as patient_email, p.address as patient_address, p.city as patient_city, p.phone as patient_phone, pr.name as practitioner_name, pr.title as practitioner_title, pr.license_number as practitioner_license, l.name as location_name, l.address as location_address, l.phone as location_phone from invoices i join patients p on p.id = i.patient_id left join practitioners pr on pr.id = i.practitioner_id left join locations l on l.id = i.location_id where i.id = ${id}`;
   if (!r.length) return null;
   const payments: Row[] = await tx`select * from payments where invoice_id = ${id} order by paid_at`;
   return decorate(r[0], payments);

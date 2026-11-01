@@ -34,5 +34,7 @@ jobs:
       - run: npm run db:migrate
       - name: Tenant isolation test
         run: npm run test:rls
+      - name: Import mapping test
+        run: npm run test:import
       - run: npm run typecheck
       - run: npm run build

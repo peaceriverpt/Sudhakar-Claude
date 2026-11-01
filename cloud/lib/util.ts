@@ -47,7 +47,7 @@ export const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).joi
 export const COLORS = ['#0f766e', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#ca8a04', '#9333ea', '#dc2626', '#4f46e5', '#059669'];
 export const STATUS_LABEL: Record<string, string> = { booked: 'Booked', arrived: 'Arrived', in_progress: 'In progress', completed: 'Completed', no_show: 'No show', cancelled: 'Cancelled' };
 export const PAY_METHODS = ['Credit Card', 'Debit', 'Cash', 'E-transfer', 'Insurance', 'Gift Card', 'Other'];
-export const DISCIPLINES = ['Physiotherapy', 'Massage Therapy', 'Chiropractic', 'Acupuncture', 'Kinesiology', 'Osteopathy', 'Naturopathy', 'Counselling'];
+export const DISCIPLINES = ['Physiotherapy', 'Massage Therapy', 'Chiropractic', 'Acupuncture', 'Kinesiology', 'Osteopathy', 'Naturopathy', 'Counselling', 'Stretch Therapy', 'Other'];
 export const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 
 export type InvoiceItem = { id: string; desc: string; qty: number; priceCents: number; taxable: boolean; kind: 'treatment' | 'product' | 'custom' };

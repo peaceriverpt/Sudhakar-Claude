@@ -12,7 +12,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/reset.ts",
     "test:rls": "tsx scripts/test-rls.ts",
-    "vercel-build": "tsx scripts/deploy.ts && next build"
+    "vercel-build": "tsx scripts/deploy.ts && next build",
+    "test:import": "tsx scripts/test-import.ts"
   },
   "dependencies": {
     "bcryptjs": "3.0.3",
